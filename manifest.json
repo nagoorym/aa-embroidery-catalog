@@ -1,0 +1,10 @@
+{
+  "name":"AA Embroidery — Design Catalog",
+  "short_name":"AA Embroidery",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f7f5f1",
+  "theme_color":"#151515",
+  "description":"AA Embroidery Work design catalog, stitch calculator and folder scanner",
+  "icons":[]
+}

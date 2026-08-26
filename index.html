@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#151515">
+<meta name="description" content="AA Embroidery Work design catalog and stitch pricing">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<title>AA Embroidery — Design Catalog</title>
+</head>
+<body>
+<div id="app">
+
+  <aside class="sidebar" id="desktopSidebar">
+    <div class="brand-block">
+      <img class="logo" src="https://ik.imagekit.io/MiCV/logo%20white.svg" alt="AA Embroidery">
+      <div class="brand-subtitle">DESIGN CATALOG</div>
+    </div>
+
+    <nav class="side-nav">
+      <div class="nav-label">WORKSPACE</div>
+      <button class="navitem active" data-view="search"><span class="nav-icon">⌕</span><span>Design Search</span></button>
+      <button class="navitem" data-view="price"><span class="nav-icon">₹</span><span>Price Search</span></button>
+      <button class="navitem" data-view="catalog"><span class="nav-icon">▱</span><span>Update Catalog</span></button>
+
+      <div class="nav-label">CATALOG</div>
+      <button class="navitem" data-view="scan"><span class="nav-icon">⌂</span><span>Folder & Scanner</span></button>
+      <button class="navitem" data-view="info"><span class="nav-icon">ⓘ</span><span>Catalog Info</span></button>
+
+      <div class="nav-label">SYSTEM</div>
+      <button class="navitem" data-view="settings"><span class="nav-icon">⚙</span><span>Pricing Settings</span></button>
+    </nav>
+
+    <div class="root-card">
+      <div class="root-title">ROOT FOLDER ACCESS</div>
+      <div class="root-status"><span class="status-dot"></span><span id="sideRootStatus">Not connected</span></div>
+      <div class="root-path" id="sideRootPath">C:\Embroidery</div>
+      <button id="sidePickFolder" class="outline-gold">CHANGE FOLDER</button>
+    </div>
+
+    <div class="side-footer">AA EMBROIDERY<br><span>PRECISION IN EVERY STITCH</span></div>
+  </aside>
+
+  <div class="mobile-topbar">
+    <button id="menuBtn" class="iconbtn" aria-label="Menu">☰</button>
+    <div class="mobile-brand">
+      <img src="https://ik.imagekit.io/MiCV/logo%20white.svg" alt="AA Embroidery">
+    </div>
+    <button id="refreshBtn" class="iconbtn" aria-label="Refresh">↻</button>
+  </div>
+
+  <aside id="drawer" class="drawer">
+    <div class="drawer-head">
+      <img src="https://ik.imagekit.io/MiCV/logo%20white.svg" alt="AA Embroidery">
+      <button id="closeMenu" class="iconbtn dark">×</button>
+    </div>
+    <button data-view="search" class="navitem">⌕ <span>Design Search</span></button>
+    <button data-view="price" class="navitem">₹ <span>Price Search</span></button>
+    <button data-view="catalog" class="navitem">▱ <span>Update Catalog</span></button>
+    <button data-view="scan" class="navitem">⌂ <span>Folder & Scanner</span></button>
+    <button data-view="info" class="navitem">ⓘ <span>Catalog Info</span></button>
+    <button data-view="settings" class="navitem">⚙ <span>Pricing Settings</span></button>
+  </aside>
+  <div id="shade" class="shade"></div>
+
+  <main class="workspace">
+    <header class="workspace-top">
+      <div class="root-strip">
+        <span class="folder-symbol">□</span>
+        <span class="root-label">Root Folder</span>
+        <span class="root-divider">|</span>
+        <span id="topRootPath">C:\Embroidery</span>
+      </div>
+      <div class="top-actions">
+        <button id="topPickFolder" class="top-action">✎ Change Folder</button>
+        <button id="topScan" class="top-action">↻ Scan / Refresh</button>
+      </div>
+    </header>
+
+    <main class="main">
+
+      <section id="view-search" class="view active">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">CATALOG SEARCH</div>
+            <h1>Search Designs</h1>
+            <p>Search by design folder number. All files inside the same folder stay together.</p>
+          </div>
+          <div class="heading-badge"><span class="status-dot"></span><span id="headingCatalogStatus">Catalog ready</span></div>
+        </div>
+
+        <div class="searchbar premium-search">
+          <input id="designInput" inputmode="numeric" autocomplete="off" placeholder="Enter design number, e.g. 786">
+          <button id="designSearchBtn">SEARCH</button>
+        </div>
+        <div id="catalogStatus" class="status"></div>
+        <div id="designResults"></div>
+
+        <div class="how-panel">
+          <div class="how-item"><span class="how-icon">⌕</span><div><b>Search</b><p>Find a design across every collection and folder.</p></div></div>
+          <div class="how-item"><span class="how-icon">×2</span><div><b>Sleeve calculation</b><p>Sleeve/Hand files are priced as two sleeves.</p></div></div>
+          <div class="how-item"><span class="how-icon">₹</span><div><b>Pricing</b><p>Every 1,000 billable stitches = ₹10 by default.</p></div></div>
+        </div>
+      </section>
+
+      <section id="view-price" class="view">
+        <div class="page-heading">
+          <div><div class="eyebrow">PRICE SEARCH</div><h1>Find designs by price</h1><p>Filter using calculated design cost.</p></div>
+        </div>
+        <div class="price-layout">
+          <div class="filter-card">
+            <div class="filter-title">SEARCH FILTERS</div>
+            <div class="filters">
+              <label>Minimum price ₹<input id="minPrice" type="number" min="0" step="10" placeholder="0"></label>
+              <label>Maximum price ₹<input id="maxPrice" type="number" min="0" step="10" placeholder="400"></label>
+              <label>Component
+                <select id="priceComponent">
+                  <option value="">All components</option>
+                  <option>Back</option><option>Front</option><option>Sleeve/Hand</option>
+                  <option>Full Neck</option><option>Neck</option><option>Buti</option>
+                  <option>Patch</option><option>Logo</option><option>Other</option>
+                </select>
+              </label>
+              <button id="priceSearchBtn">SEARCH PRICES</button>
+            </div>
+            <div class="configuration-note">
+              <b>Current price-search rule</b>
+              <span>All recognized files in the design folder are included. Use DETAILS to inspect the folder before quoting.</span>
+            </div>
+          </div>
+          <div id="priceResults" class="price-results"></div>
+        </div>
+      </section>
+
+      <section id="view-catalog" class="view">
+        <div class="page-heading"><div><div class="eyebrow">DATA SOURCE</div><h1>Update Catalog</h1><p>Load the master Excel generated by your folder scanner.</p></div></div>
+        <div class="card upload-card">
+          <div class="upload-icon">↑</div>
+          <h2>Load master catalog</h2>
+          <p>The Excel file is stored locally in this browser. It is not uploaded to a server.</p>
+          <input id="excelInput" type="file" accept=".xlsx,.xls,.csv">
+          <div id="loadStatus" class="status"></div>
+          <div class="buttonrow"><button id="clearCatalog" class="secondary">Clear Catalog</button></div>
+        </div>
+      </section>
+
+      <section id="view-scan" class="view">
+        <div class="page-heading"><div><div class="eyebrow">WINDOWS / TABLET</div><h1>Folder & Scanner</h1><p>Connect your real embroidery folder to browse exact locations and rebuild the catalog.</p></div></div>
+        <div class="scan-grid">
+          <div class="card">
+            <div class="step-number">01</div><h2>Connect root folder</h2>
+            <p class="muted">Select the real <b>C:\Embroidery</b> folder. Access is read-only.</p>
+            <button id="pickFolder">📁 SELECT EMBROIDERY FOLDER</button>
+            <div id="folderPath" class="path">No folder selected</div>
+            <label class="path-label">Root path shown in the app
+              <input id="rootPathInput" value="C:\Embroidery" placeholder="C:\Embroidery">
+            </label>
+            <div class="buttonrow"><button id="saveRootPath" class="secondary">SAVE ROOT PATH</button></div>
+          </div>
+
+          <div class="card">
+            <div class="step-number">02</div><h2>Scan and export</h2>
+            <p class="muted">Scan files without modifying the source folder.</p>
+            <div class="progress"><div id="scanBar"></div></div>
+            <div id="scanStatus" class="status">Ready.</div>
+            <div class="stats">
+              <div><b id="statFiles">0</b><span>Files</span></div><div><b id="statDst">0</b><span>DST</span></div>
+              <div><b id="statEmb">0</b><span>EMB</span></div><div><b id="statDesigns">0</b><span>Designs</span></div>
+              <div><b id="statReview">0</b><span>Review</span></div>
+            </div>
+            <div class="buttonrow"><button id="scanBtn" disabled>SCAN FOLDER</button><button id="stopScan" class="secondary" disabled>STOP</button><button id="exportXlsx" class="secondary" disabled>EXPORT EXCEL</button></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="page-heading"><div><div class="eyebrow">SYSTEM</div><h1>Pricing Settings</h1><p>Change the calculation defaults used by the catalog.</p></div></div>
+        <div class="card settings-card">
+          <label>Rate per 1,000 billable stitches<input id="rateInput" type="number" min="0" step="1"></label>
+          <label>Sleeve multiplier<input id="sleeveMultiplier" type="number" min="1" step="1"></label>
+          <div class="settings-rule"><b>Calculation rule</b><span>FLOOR(actual stitches ÷ 1,000) × rate</span></div>
+          <button id="saveSettings">SAVE SETTINGS</button>
+        </div>
+      </section>
+
+      <section id="view-info" class="view">
+        <div class="page-heading"><div><div class="eyebrow">CATALOG</div><h1>Catalog Information</h1><p>Current local data source and system status.</p></div></div>
+        <div id="infoCard" class="card info-card"></div>
+      </section>
+
+    </main>
+
+    <footer class="footer">AA EMBROIDERY <span>•</span> PRECISION IN EVERY STITCH <span>•</span> <small>Version 1.0</small></footer>
+  </main>
+
+  <nav class="mobile-nav">
+    <button data-view="search" class="mobile-navitem active"><span>⌕</span><small>Home</small></button>
+    <button data-view="search" class="mobile-navitem"><span>⌕</span><small>Search</small></button>
+    <button data-view="catalog" class="mobile-navitem"><span>□</span><small>Catalog</small></button>
+    <button data-view="info" class="mobile-navitem"><span>•••</span><small>More</small></button>
+  </nav>
+
+  <div id="detailsModal" class="modal" aria-hidden="true">
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="detailsTitle">
+      <div class="modal-head"><h2 id="detailsTitle">Folder Details</h2><button id="closeDetails" class="iconbtn dark" type="button">×</button></div>
+      <div id="detailsBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</div>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
