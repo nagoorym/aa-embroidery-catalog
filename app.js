@@ -294,10 +294,11 @@ function renderGroup(group){
       item.qty=Math.max(1,Number(input.value)||1);
       input.value=item.qty;
       const sleeve=item.row.component==="Sleeve/Hand";
-      const multiplier=sleeve?state.sleeveMultiplier:1;
-      const billable=item.row.stitches*item.qty*multiplier;
+      const baseMultiplier=sleeve?state.sleeveMultiplier:1;
+      const effectiveMultiplier=item.qty*baseMultiplier;
+      const billable=item.row.stitches*effectiveMultiplier;
       const rowUnits=Math.floor(billable/1000);
-      item.el.querySelector('.multiplier-cell').textContent='×'+multiplier;
+      item.el.querySelector('.multiplier-cell').textContent='×'+effectiveMultiplier;
       item.el.querySelector('.amount-cell').textContent=money(rowUnits*state.rate);
       item.el.classList.toggle('not-included',!check.checked);
       if(check.checked)selected.push(item);
