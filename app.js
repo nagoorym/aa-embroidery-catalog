@@ -227,44 +227,97 @@ function groupDesigns(rows){
   return [...map.values()];
 }
 function designCost(group,selected){
-  let stitches=0,units=0,cost=0;
-  for(const r of selected){
-    const qty=r.component==="Sleeve/Hand"?state.sleeveMultiplier:1;
-    const s=r.stitches*qty;
-    const u=Math.floor(s/1000);
-    stitches+=s;units+=u;cost+=u*state.rate;
+  // Qty = number of sets requested. Sleeve/Hand has a base ×2 charge
+  // because one set normally means left + right. Every value below is
+  // derived from the same formula so row amounts and the summary cannot drift.
+  let actualStitches=0,billableStitches=0,units=0,cost=0;
+  for(const item of selected){
+    const r=item.row||item;
+    const qty=Math.max(1,Math.trunc(Number(item.qty)||1));
+    const multiplier=r.component==="Sleeve/Hand"?state.sleeveMultiplier:1;
+    const actual=r.stitches*qty;
+    const billable=actual*multiplier;
+    const rowUnits=Math.floor(billable/1000);
+    const rowCost=rowUnits*state.rate;
+    actualStitches+=actual;
+    billableStitches+=billable;
+    units+=rowUnits;
+    cost+=rowCost;
   }
-  return {stitches,units,cost};
+  return {actualStitches,billableStitches,units,cost};
 }
-function renderGroup(group){
-  const box=document.createElement("div");box.className="result";
-  const head=document.createElement("div");head.className="resulthead";
-  head.innerHTML=`<h3>Design ${escapeHtml(group.design)}</h3><div class="muted">${escapeHtml(group.collection)} · Folder: ${escapeHtml(group.folder)}<br>${escapeHtml(group.path)}</div>`;
-  box.appendChild(head);
-  const comps=document.createElement("div");comps.className="components";
-  const valid=group.rows.filter(r=>r.stitches>0);
-  valid.forEach((r,i)=>{
-    const row=document.createElement("label");row.className="comp";
-    const sleeve=r.component==="Sleeve/Hand";
-    row.innerHTML=`<input type="checkbox" data-i="${i}"><span><span class="compname">${escapeHtml(r.component)}</span><br><span class="file">${escapeHtml(r.filename)} · ${fmt(r.stitches)} stitches${sleeve?" · sleeve ×"+state.sleeveMultiplier:""}</span></span><span>${sleeve?"×"+state.sleeveMultiplier:"×1"}</span><span>${money(Math.floor((r.stitches*(sleeve?state.sleeveMultiplier:1))/1000)*state.rate)}</span>`;
-    comps.appendChild(row);
-  });
-  const actions=document.createElement("div");actions.className="result-actions";
-  const detailBtn=document.createElement("button");detailBtn.className="secondary detail-btn";detailBtn.type="button";detailBtn.textContent="DETAILS";
-  detailBtn.onclick=()=>showFolderDetails(group);
-  actions.appendChild(detailBtn);
 
-  const calc=document.createElement("div");calc.className="calc";
-  calc.innerHTML=`<div>Actual stitches<b class="ct">0</b></div><div>Billable units<b class="cu">0</b></div><div>Total cost<b class="cc">₹0</b></div>`;
-  box.appendChild(comps);box.appendChild(actions);box.appendChild(calc);
+function renderGroup(group){
+  const box=document.createElement("div");box.className="result design-workspace";
+  const head=document.createElement("div");head.className="resulthead design-head";
+  head.innerHTML=`
+    <div><h3>Design ${escapeHtml(group.design)}</h3>
+    <div class="muted design-meta">${escapeHtml(group.collection)} · Folder: ${escapeHtml(group.folder)}<br>${escapeHtml(group.path)}</div></div>
+    <div class="sleeve-note"><b>ⓘ</b><span>Sleeve / Hand items are counted as <strong>×${state.sleeveMultiplier}</strong> by default<br>(for both left & right).<br>Use Qty to adjust the number of sets required.</span></div>`;
+  box.appendChild(head);
+
+  const comps=document.createElement("div");comps.className="components component-table";
+  const tableHead=document.createElement("div");tableHead.className="comp table-head";
+  tableHead.innerHTML=`<span>Include</span><span>Component</span><span>File & Stitches</span><span>Qty (units)</span><span>Multiplier</span><span>Amount</span>`;
+  comps.appendChild(tableHead);
+
+  const valid=group.rows.filter(r=>r.stitches>0);
+  const rows=[];
+  valid.forEach((r,i)=>{
+    const sleeve=r.component==="Sleeve/Hand";
+    const row=document.createElement("div");row.className="comp comp-row";
+    row.innerHTML=`
+      <div class="include-cell"><input type="checkbox" data-i="${i}" checked aria-label="Include ${escapeHtml(r.filename)}"></div>
+      <div class="component-cell"><span class="component-icon ${sleeve?'sleeve':String(r.component).toLowerCase().replace(/\s+/g,'-')}">${sleeve?'✋':r.component==='Front'?'👕':r.component==='Full Neck'?'👚':'✦'}</span><span class="compname">${escapeHtml(r.component)}</span></div>
+      <div class="file-cell"><b>${escapeHtml(r.filename)}</b><span>${fmt(r.stitches)} stitches</span></div>
+      <div class="qty-cell"><div class="qty-control"><button type="button" class="qty-btn minus" aria-label="Decrease quantity">−</button><input class="qty-input" type="number" min="1" value="1" aria-label="Quantity"><button type="button" class="qty-btn plus" aria-label="Increase quantity">+</button></div><small>units</small></div>
+      <div class="multiplier-cell">×${sleeve?state.sleeveMultiplier:1}</div>
+      <div class="amount-cell">₹0</div>`;
+    comps.appendChild(row);
+    rows.push({row:r,el:row,qty:1});
+  });
+
+  const calc=document.createElement("div");calc.className="calc calc-expanded";
+  calc.innerHTML=`
+    <div>Actual stitches<b class="ct">0</b></div>
+    <div>Billable stitches<b class="cb">0</b></div>
+    <div>Billable units<b class="cu">0</b></div>
+    <div class="total-cost">Total cost<b class="cc">₹0</b></div>
+    <button type="button" class="secondary copy-group-path">▣&nbsp; COPY PATH</button>`;
+  box.appendChild(comps);box.appendChild(calc);
+
   const update=()=>{
-    const selected=[...comps.querySelectorAll("input:checked")].map(x=>valid[Number(x.dataset.i)]);
+    const selected=[];
+    rows.forEach(item=>{
+      const check=item.el.querySelector('input[type="checkbox"]');
+      const input=item.el.querySelector('.qty-input');
+      item.qty=Math.max(1,Number(input.value)||1);
+      input.value=item.qty;
+      const sleeve=item.row.component==="Sleeve/Hand";
+      const multiplier=sleeve?state.sleeveMultiplier:1;
+      const billable=item.row.stitches*item.qty*multiplier;
+      const rowUnits=Math.floor(billable/1000);
+      item.el.querySelector('.multiplier-cell').textContent='×'+multiplier;
+      item.el.querySelector('.amount-cell').textContent=money(rowUnits*state.rate);
+      item.el.classList.toggle('not-included',!check.checked);
+      if(check.checked)selected.push(item);
+    });
     const c=designCost(group,selected);
-    calc.querySelector(".ct").textContent=fmt(c.stitches);
-    calc.querySelector(".cu").textContent=fmt(c.units);
-    calc.querySelector(".cc").textContent=money(c.cost);
+    calc.querySelector('.ct').textContent=fmt(c.actualStitches);
+    calc.querySelector('.cb').textContent=fmt(c.billableStitches);
+    calc.querySelector('.cu').textContent=fmt(c.units);
+    calc.querySelector('.cc').textContent=money(c.cost);
   };
-  comps.addEventListener("change",update);
+
+  rows.forEach(item=>{
+    const input=item.el.querySelector('.qty-input');
+    item.el.querySelector('.minus').onclick=()=>{input.value=Math.max(1,(Number(input.value)||1)-1);update();};
+    item.el.querySelector('.plus').onclick=()=>{input.value=(Number(input.value)||1)+1;update();};
+    input.oninput=update;
+    item.el.querySelector('input[type="checkbox"]').onchange=update;
+  });
+  calc.querySelector('.copy-group-path').onclick=e=>copyFolderPath(group,e.currentTarget);
+  update();
   return box;
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
@@ -484,11 +537,25 @@ async function pickEmbroideryFolder(){
   }
   try{
     const handle=await window.showDirectoryPicker({mode:"read"});
+    const previousFolderName=state.rootFolderName || rootName || "";
     state.rootHandle=handle;
     state.folderHandle=handle;
     rootName=handle.name;
     state.rootFolderName=rootName;
     localStorage.setItem("aa_root_folder_name",rootName);
+
+    // Browsers intentionally do not expose the real Windows absolute path of a
+    // folder selected with showDirectoryPicker(). If the displayed root path
+    // ended with the previously selected folder name, update that last segment
+    // to the newly selected folder name. The user can still enter the exact
+    // Windows path manually when the folder is located elsewhere.
+    const currentRoot=String(state.rootPath||"").replace(/[\\/]+$/,"");
+    const lastPart=currentRoot.split(/[\\/]+/).pop()||"";
+    if(previousFolderName && lastPart.toLowerCase()===String(previousFolderName).toLowerCase()){
+      state.rootPath=currentRoot.slice(0,currentRoot.length-lastPart.length)+rootName;
+      localStorage.setItem("aa_root_path",state.rootPath);
+    }
+
     $("rootPathInput").value=state.rootPath;
     $("folderPath").textContent=`Selected: ${rootName}`;
     $("scanBtn").disabled=false;
@@ -523,7 +590,11 @@ $("saveRootPath").onclick=()=>{
   if(!p){toast("Enter the root folder path");return}
   state.rootPath=p.replace(/[\\/]+$/,"");
   localStorage.setItem("aa_root_path",state.rootPath);
-  toast("Root path saved");
+  updateRootUI();
+  $("folderPath").textContent=state.rootFolderName
+    ? `Selected: ${state.rootFolderName} · Copy root: ${state.rootPath}`
+    : `Copy root: ${state.rootPath}`;
+  toast("Root path updated — COPY PATH will use this path");
 };
 let scanRows=[];
 $("scanBtn").onclick=async()=>{
