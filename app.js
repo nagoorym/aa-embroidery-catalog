@@ -35,28 +35,57 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeFolderDetails(
 
 function normalizeRow(r){
   const get=(...names)=>{for(const n of names){if(r[n]!==undefined&&r[n]!==null&&String(r[n]).trim()!=="")return r[n]}return ""};
+
+  const filename=String(get("Filename")).trim();
+  const suppliedComponent=String(get("Component")).trim();
+  const detectedComponent=componentFrom(filename);
+
+  // Re-detect rows that were previously saved as "Other".
+  // This lets an updated filename rule fix old catalogs without requiring
+  // the user to edit every Excel row manually.
+  const component=(!suppliedComponent || suppliedComponent.toLowerCase()==="other")
+    ? detectedComponent
+    : suppliedComponent;
+
   return {
     collection:String(get("Collection")).trim(),
     path:String(get("Path")).trim(),
     folder:String(get("Folder")).trim(),
     design:String(get("Design")).trim(),
-    filename:String(get("Filename")).trim(),
-    component:String(get("Component")).trim()||componentFrom(r.Filename||""),
+    filename,
+    component,
     format:String(get("Format")).trim().toUpperCase(),
     stitches:Number(get("Stitches","Actual Stitches"))||0,
     review:String(get("Review")).trim()
   };
 }
+
 function componentFrom(name){
-  const n=String(name).toLowerCase().replace(/\.[^.]+$/,"");
-  if(/\bback\b/.test(n))return "Back";
-  if(/\bfront\b/.test(n))return "Front";
-  if(/\b(full\s*neck|fullneck)\b/.test(n))return "Full Neck";
-  if(/\bneck\b/.test(n))return "Neck";
-  if(/\b(hand|sleeve)\b/.test(n))return "Sleeve/Hand";
-  if(/\bbooti\b|\bbuti\b/.test(n))return "Buti";
-  if(/\bpatch\b/.test(n))return "Patch";
-  if(/\blogo\b/.test(n))return "Logo";
+  // File names in the source folders are not always consistently formatted.
+  // Convert underscores, hyphens, dots, brackets, numbers, etc. into
+  // searchable tokens so words such as "HAND" or "SLEEVE" are detected
+  // anywhere in the file name, not only at the beginning.
+  const raw=String(name||"").replace(/\.[^.]+$/,"");
+  const n=raw
+    .replace(/([a-z])([A-Z])/g,"$1 $2")
+    .toLowerCase()
+    .replace(/([a-z])(\d)/g,"$1 $2")
+    .replace(/(\d)([a-z])/g,"$1 $2")
+    .replace(/[^a-z]+/g," ")
+    .trim();
+
+  const has=(...words)=>words.some(word=>new RegExp("(^|\\s)"+word+"(?=\\s|$)","i").test(n));
+
+  // Check more specific names before generic names.
+  if(has("fullneck") || /(^|\\s)full\\s+neck(?=\\s|$)/i.test(n)) return "Full Neck";
+  if(has("back")) return "Back";
+  if(has("front")) return "Front";
+  if(has("hand","hands","sleeve","sleeves","slv","slvhand","sleev")) return "Sleeve/Hand";
+  if(has("neck")) return "Neck";
+  if(has("booti","buti")) return "Buti";
+  if(has("patch")) return "Patch";
+  if(has("logo")) return "Logo";
+
   return "Other";
 }
 async function readWorkbook(file){
@@ -240,13 +269,57 @@ function renderGroup(group){
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 
+async function copyTextToClipboard(text){
+  const value=String(text||"");
+  if(!value)throw new Error("Nothing to copy");
+  if(navigator.clipboard && window.isSecureContext){
+    await navigator.clipboard.writeText(value);
+    return true;
+  }
+  const textarea=document.createElement("textarea");
+  textarea.value=value;
+  textarea.setAttribute("readonly","");
+  textarea.style.position="fixed";
+  textarea.style.opacity="0";
+  textarea.style.pointerEvents="none";
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0,textarea.value.length);
+  const copied=document.execCommand("copy");
+  document.body.removeChild(textarea);
+  if(!copied)throw new Error("Copy command failed");
+  return true;
+}
+function exactFolderPath(group){
+  const root=String(state.rootPath||"").replace(/[\\/]+$/,"");
+  const relative=String(group.path||"").replace(/[\\/]+/g,"\\");
+  return relative ? `${root}\\${relative}` : root;
+}
+async function copyFolderPath(group,button){
+  const path=exactFolderPath(group);
+  const original=button.textContent;
+  try{
+    await copyTextToClipboard(path);
+    button.textContent="COPIED ✓";
+    button.classList.add("copied");
+    toast("Folder path copied");
+  }catch(e){
+    button.textContent="COPY FAILED";
+    toast("Copy failed — please try again");
+  }
+  setTimeout(()=>{
+    button.textContent=original;
+    button.classList.remove("copied");
+  },1800);
+}
+
 function showFolderDetails(group){
   const modal=$("detailsModal");
   const body=$("detailsBody");
   const title=$("detailsTitle");
   title.textContent=`Design ${group.design} — Folder Details`;
   body.innerHTML="";
-  const fullPath=state.rootPath.replace(/[\\/]+$/,"")+"\\"+group.path.replace(/[\\/]+/g,"\\");
+  const fullPath=exactFolderPath(group);
   const wrap=document.createElement("div");
   wrap.innerHTML=`
     <div class="detail-meta">
@@ -261,10 +334,7 @@ function showFolderDetails(group){
     </div>
   `;
   body.appendChild(wrap);
-  $("copyFolderPathBtn").onclick=async()=>{
-    try{await navigator.clipboard.writeText(fullPath);toast("Folder path copied");}
-    catch(e){toast("Copy failed — select the path manually");}
-  };
+  $("copyFolderPathBtn").onclick=()=>copyFolderPath(group,$("copyFolderPathBtn"));
 
   const table=document.createElement("table");
   table.className="detail-table";
@@ -332,9 +402,9 @@ function priceSearch(){
     info.innerHTML=`<b>Design ${escapeHtml(g.design)}</b><br><span class="muted">${escapeHtml(g.collection)} · Folder: ${escapeHtml(g.folder)}</span><br><span class="muted">${fmt(g.c.stitches)} stitches · ${fmt(g.c.units)} units</span>`;
     const right=document.createElement("span");right.className="price-right";
     const cost=document.createElement("b");cost.textContent=money(g.c.cost);
-    const detail=document.createElement("button");detail.type="button";detail.className="secondary detail-btn";detail.textContent="DETAILS";
-    detail.onclick=()=>showFolderDetails(g);
-    right.appendChild(cost);right.appendChild(detail);
+    const copyBtn=document.createElement("button");copyBtn.type="button";copyBtn.className="secondary detail-btn copy-path-btn";copyBtn.textContent="COPY PATH";
+    copyBtn.onclick=()=>copyFolderPath(g,copyBtn);
+    right.appendChild(cost);right.appendChild(copyBtn);
     d.appendChild(info);d.appendChild(right);
     box.appendChild(d);
   });
