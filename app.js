@@ -283,7 +283,7 @@ function renderGroup(group){
     <div>Billable stitches<b class="cb">0</b></div>
     <div>Billable units<b class="cu">0</b></div>
     <div class="total-cost">Total cost<b class="cc">₹0</b></div>
-    <button type="button" class="secondary copy-group-path">▣&nbsp; COPY PATH</button>`;
+    <button type="button" class="secondary preview-design-btn">◉&nbsp; PREVIEW DESIGN</button>`;
   box.appendChild(comps);box.appendChild(calc);
 
   const update=()=>{
@@ -317,7 +317,7 @@ function renderGroup(group){
     input.oninput=update;
     item.el.querySelector('input[type="checkbox"]').onchange=update;
   });
-  calc.querySelector('.copy-group-path').onclick=e=>copyFolderPath(group,e.currentTarget);
+  calc.querySelector('.preview-design-btn').onclick=()=>openDesignPreview(group);
   update();
   return box;
 }
@@ -365,6 +365,38 @@ async function copyFolderPath(group,button){
     button.textContent=original;
     button.classList.remove("copied");
   },1800);
+}
+
+
+// DST preview integration. Reads the actual selected folder through the
+// File System Access API and passes real .DST File objects to dst-viewer.js.
+async function openDesignPreview(group){
+  if(!state.rootHandle){
+    toast("Connect the Embroidery folder first.");
+    setView("scan");
+    return;
+  }
+  const ok=await ensureRootPermission();
+  if(!ok){toast("Folder permission is required to preview DST files.");return;}
+  try{
+    const dir=await getDirectoryByPath(group.path);
+    const files=[];
+    for await(const [name,handle] of dir.entries()){
+      if(handle.kind==="file" && name.toLowerCase().endsWith(".dst")){
+        files.push(await handle.getFile());
+      }
+    }
+    if(!files.length){toast("No DST files found in this design folder.");return;}
+    if(!window.AADstViewer){toast("DST viewer is still loading. Reload and try again.");return;}
+    window.AADstViewer.open({
+      title:"Design "+group.design,
+      folderPath:exactFolderPath(group),
+      files
+    });
+  }catch(e){
+    console.error(e);
+    toast("Could not open the design folder: "+e.message);
+  }
 }
 
 function showFolderDetails(group){
