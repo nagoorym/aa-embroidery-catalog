@@ -312,20 +312,25 @@ function designCost(group,selected){
 }
 
 function renderGroup(group){
-  const box=document.createElement("div");box.className="result design-workspace";
+  const box=document.createElement("div");box.className="result design-workspace collapsed-result";
+  const valid=group.rows.filter(r=>r.stitches>0);
+  const base=designCost(group,valid.map(row=>({row,qty:1})));
+  const summary=document.createElement("div");summary.className="result-summary";
+  summary.innerHTML=`<div><h3>Design ${escapeHtml(group.design)}</h3><span class="muted">${escapeHtml(group.collection)} · Folder: ${escapeHtml(group.folder)}</span></div><div class="summary-metrics"><span>Total stitches <b class="summary-stitches">${fmt(base.actualStitches)}</b></span><span>Price <b class="summary-price">${money(base.cost)}</b></span><button type="button" class="secondary collapse-toggle">VIEW DETAILS ▾</button></div>`;
+  box.appendChild(summary);
+  const details=document.createElement("div");details.className="result-details";details.hidden=true;
   const head=document.createElement("div");head.className="resulthead design-head";
   head.innerHTML=`
     <div><h3>Design ${escapeHtml(group.design)}</h3>
     <div class="muted design-meta">${escapeHtml(group.collection)} · Folder: ${escapeHtml(group.folder)}<br>${escapeHtml(group.path)}</div></div>
     <div class="sleeve-note"><b>ⓘ</b><span>Sleeve / Hand items are counted as <strong>×${state.sleeveMultiplier}</strong> by default<br>(for both left & right).<br>Use Qty to adjust the number of sets required.</span></div>`;
-  box.appendChild(head);
+  details.appendChild(head);
 
   const comps=document.createElement("div");comps.className="components component-table";
   const tableHead=document.createElement("div");tableHead.className="comp table-head";
   tableHead.innerHTML=`<span>Include</span><span>Component</span><span>File & Stitches</span><span>Qty (units)</span><span>Multiplier</span><span>Amount</span>`;
   comps.appendChild(tableHead);
 
-  const valid=group.rows.filter(r=>r.stitches>0);
   const rows=[];
   valid.forEach((r,i)=>{
     const sleeve=r.component==="Sleeve/Hand";
@@ -348,7 +353,7 @@ function renderGroup(group){
     <div>Billable units<b class="cu">0</b></div>
     <div class="total-cost">Total cost<b class="cc">₹0</b></div>
     <button type="button" class="secondary preview-design-btn">◉&nbsp; PREVIEW DESIGN</button>`;
-  box.appendChild(comps);box.appendChild(calc);
+  details.appendChild(comps);details.appendChild(calc);box.appendChild(details);
 
   const update=()=>{
     const selected=[];
@@ -372,6 +377,8 @@ function renderGroup(group){
     calc.querySelector('.cb').textContent=fmt(c.billableStitches);
     calc.querySelector('.cu').textContent=fmt(c.units);
     calc.querySelector('.cc').textContent=money(c.cost);
+    summary.querySelector('.summary-stitches').textContent=fmt(c.actualStitches);
+    summary.querySelector('.summary-price').textContent=money(c.cost);
   };
 
   rows.forEach(item=>{
@@ -382,6 +389,12 @@ function renderGroup(group){
     item.el.querySelector('input[type="checkbox"]').onchange=update;
   });
   calc.querySelector('.preview-design-btn').onclick=()=>openDesignPreview(group);
+  summary.querySelector('.collapse-toggle').onclick=()=>{
+    const open=details.hidden;
+    details.hidden=!open;
+    box.classList.toggle('collapsed-result',!open);
+    summary.querySelector('.collapse-toggle').textContent=open?"HIDE DETAILS ▴":"VIEW DETAILS ▾";
+  };
   update();
   return box;
 }
@@ -517,6 +530,19 @@ function closeFolderDetails(){
   modal.classList.remove("open");
   modal.setAttribute("aria-hidden","true");
 }
+function sortGroupsBy(groups,mode){
+  const value=g=>{
+    const rows=g.rows.filter(r=>r.stitches>0);
+    const c=designCost(g,rows.map(row=>({row,qty:1})));
+    return {stitches:c.actualStitches,price:c.cost};
+  };
+  const dir=String(mode||"").endsWith("desc")?-1:1;
+  const field=String(mode||"stitch-asc").startsWith("price")?"price":"stitches";
+  return groups.sort((a,b)=>{
+    const av=value(a)[field],bv=value(b)[field];
+    return (av-bv)*dir||String(a.design).localeCompare(String(b.design),undefined,{numeric:true});
+  });
+}
 function searchDesign(){
   const q=$("designInput").value.trim().toLowerCase();
   const out=$("designResults");out.innerHTML="";
@@ -530,12 +556,14 @@ function searchDesign(){
     const motifMatch=g.rows.some(r=>rowMatchesMotif(r,state.designMotif));
     return numberMatch&&motifMatch;
   });
+  sortGroupsBy(groups,$("designSort")?.value||"stitch-asc");
   const label=q?("Design "+q):(MOTIF_CATEGORIES.find(x=>x.id===state.designMotif)?.label||"Motif");
   $("catalogStatus").textContent=fmt(groups.length)+" matching record"+(groups.length===1?"":"s")+" for "+label+".";
   groups.forEach(g=>out.appendChild(renderGroup(g)));
 }
 $("designSearchBtn").onclick=searchDesign;
 $("designInput").onkeydown=e=>{if(e.key==="Enter")searchDesign()};
+$("designSort").onchange=()=>{if($("designResults").children.length)searchDesign();};
 
 function priceSearch(){
   const min=$("minPrice").value===""?0:Number($("minPrice").value);
@@ -552,7 +580,10 @@ function priceSearch(){
     const c=designCost(g,rows);
     if(c.cost>=min&&c.cost<=max)out.push({...g,c});
   }
-  out.sort((a,b)=>a.c.cost-b.c.cost||String(a.design).localeCompare(String(b.design),undefined,{numeric:true}));
+  const priceSort=$("priceSort")?.value||"price-asc";
+  const desc=priceSort.endsWith("desc")?-1:1;
+  const field=priceSort.startsWith("stitch")?"actualStitches":"cost";
+  out.sort((a,b)=>(a.c[field]-b.c[field])*desc||String(a.design).localeCompare(String(b.design),undefined,{numeric:true}));
   const box=$("priceResults");box.innerHTML="";
   if(!state.rows.length){box.innerHTML='<div class="card">Load a catalog first.</div>';return}
   const summary=document.createElement("div");summary.className="status";summary.textContent=`${fmt(out.length)} matching collection/folder records`;box.appendChild(summary);
@@ -571,6 +602,7 @@ function priceSearch(){
   });
 }
 $("priceSearchBtn").onclick=priceSearch;
+$("priceSort").onchange=()=>{if($("priceResults").children.length)priceSearch();};
 
 function renderInfo(){
   $("infoCard").innerHTML=`
