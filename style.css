@@ -40,6 +40,7 @@ h2{margin:0 0 8px;font-size:20px}.page-heading p,.hero p{margin:0;color:#777;lin
 .searchbar input:focus{border-color:#bc8a3c;box-shadow:0 0 0 3px #b77a1614}
 .searchbar button,.filters button,.settings-card>button{background:var(--ink);color:#fff;border:0;border-radius:9px;padding:0 25px;font-weight:800;letter-spacing:.02em}
 .status{min-height:20px;color:#777;font-size:12px;margin:8px 0}
+.motif-filter-block{margin:0 0 16px}.motif-filter-label{font-size:10px;letter-spacing:.13em;color:#98876d;font-weight:900;margin:0 0 9px}.motif-filters{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 7px;scrollbar-width:thin}.motif-chip{flex:none;min-height:36px;border:1px solid #ddd5c9;background:#fff;color:#5c5144;border-radius:999px;padding:7px 13px;font-size:12px;font-weight:750;white-space:nowrap}.motif-chip:hover{border-color:#b77a16;color:#8a5719}.motif-chip.active{background:#1d1d1d;border-color:#1d1d1d;color:#fff}.price-motif-block{padding-bottom:14px;border-bottom:1px solid #eee;margin-bottom:14px}
 .result{background:#fff;border:1px solid var(--line);border-radius:13px;margin:14px 0;box-shadow:var(--shadow);overflow:hidden}
 .resulthead{padding:18px 20px;border-bottom:1px solid #eee}
 .resulthead h3{margin:0 0 5px;font-size:21px}.muted{color:#777;font-size:12px;line-height:1.5}
