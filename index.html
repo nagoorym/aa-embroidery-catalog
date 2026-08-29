@@ -94,6 +94,7 @@
           <input id="designInput" inputmode="numeric" autocomplete="off" placeholder="Enter design number, e.g. 786">
           <button id="designSearchBtn">SEARCH</button>
         </div>
+        <div class="motif-filter-block"><div class="motif-filter-label">BROWSE BY MOTIF</div><div id="designMotifFilters" class="motif-filters"></div></div>
         <div id="catalogStatus" class="status"></div>
         <div id="designResults"></div>
 
@@ -111,6 +112,7 @@
         <div class="price-layout">
           <div class="filter-card">
             <div class="filter-title">SEARCH FILTERS</div>
+            <div class="motif-filter-block price-motif-block"><div class="motif-filter-label">FILTER BY MOTIF</div><div id="priceMotifFilters" class="motif-filters"></div></div>
             <div class="filters">
               <label>Minimum price ₹<input id="minPrice" type="number" min="0" step="10" placeholder="0"></label>
               <label>Maximum price ₹<input id="maxPrice" type="number" min="0" step="10" placeholder="400"></label>
