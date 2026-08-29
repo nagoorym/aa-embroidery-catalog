@@ -40,8 +40,8 @@ function renderMotifFilters(){
       const b=document.createElement("button");b.type="button";b.className="motif-chip"+(state[key]===cat.id?" active":"");
       b.textContent=cat.label;b.onclick=()=>{
         state[key]=cat.id;renderMotifFilters();
-        if(key==="designMotif"){if($("designInput").value.trim())runDesignSearch();else $("catalogStatus").textContent=cat.id==="all"?"":"Motif filter: "+cat.label;}
-        else runPriceSearch();
+        if(key==="designMotif"){if($("designInput").value.trim())searchDesign();else $("catalogStatus").textContent=cat.id==="all"?"Select a motif or enter a design number.":"Motif filter: "+cat.label;}
+        else priceSearch();
       };el.appendChild(b);
     });
   };
@@ -493,7 +493,11 @@ function searchDesign(){
   const out=$("designResults");out.innerHTML="";
   if(!q){$("catalogStatus").textContent="Enter a design number.";return}
   if(!state.rows.length){$("catalogStatus").textContent="No catalog loaded. Use Update Catalog first.";return}
-  const groups=groupDesigns(state.rows).filter(g=>g.design.toLowerCase()===q);
+  const groups=groupDesigns(state.rows).filter(g=>{
+    const numberMatch=g.design.toLowerCase()===q;
+    const motifMatch=g.rows.some(r=>rowMatchesMotif(r,state.designMotif));
+    return numberMatch&&motifMatch;
+  });
   $("catalogStatus").textContent=`${fmt(groups.length)} matching collection/folder record${groups.length===1?"":"s"} found.`;
   groups.forEach(g=>out.appendChild(renderGroup(g)));
 }
@@ -507,6 +511,8 @@ function priceSearch(){
   const groups=groupDesigns(state.rows);
   const out=[];
   for(const g of groups){
+    const motifMatch=g.rows.some(r=>rowMatchesMotif(r,state.priceMotif));
+    if(!motifMatch)continue;
     let rows=g.rows.filter(r=>r.stitches>0);
     if(comp)rows=rows.filter(r=>r.component===comp);
     // Price-search estimate includes all recognized components by default.
@@ -715,6 +721,7 @@ $("exportXlsx").onclick=()=>{
   updateRootUI();
   renderInfo();
   if(state.rows.length) $("catalogStatus").textContent=`Catalog ready: ${fmt(state.rows.length)} records.`;
+  renderMotifFilters();
   if("serviceWorker" in navigator && location.protocol!=="file:"){
     navigator.serviceWorker.register("service-worker.js").catch(()=>{});
   }
