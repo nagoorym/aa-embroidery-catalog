@@ -13,6 +13,40 @@ const state={
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-IN");
 const money=n=>"₹"+fmt(n);
+const MOTIF_CATEGORIES=[
+  {id:"all",label:"All"},
+  {id:"peacock",label:"🦚 Peacock",words:["peacock","mayil"]},
+  {id:"leaf",label:"🌿 Leaf",words:["leaf","leaves"]},
+  {id:"mango",label:"🥭 Mango / Paisley",words:["mango","paisley","mankolam"]},
+  {id:"flower",label:"🌸 Flower",words:["flower","floral","lotus","rose"]},
+  {id:"bird",label:"🐦 Bird",words:["bird","parrot","swan"]},
+  {id:"elephant",label:"🐘 Elephant",words:["elephant"]},
+  {id:"butta",label:"✨ Butta",words:["butta","buti","buty","butti","booti","boota"]},
+  {id:"butterfly",label:"🦋 Butterfly",words:["butterfly"]},
+  {id:"shape",label:"◇ Shapes",words:["u shape","v shape","round","square","boat","pot shape"]}
+];
+state.designMotif="all";state.priceMotif="all";
+function rowMotifText(r){return [r.filename,r.folder,r.path,r.collection,r.design].join(" ").toLowerCase();}
+function rowMatchesMotif(r,id){
+  if(!id||id==="all")return true;
+  const cat=MOTIF_CATEGORIES.find(x=>x.id===id);if(!cat)return true;
+  const text=rowMotifText(r);
+  return cat.words.some(w=>text.includes(w));
+}
+function renderMotifFilters(){
+  const make=(target,key)=>{
+    const el=$(target);if(!el)return;el.innerHTML="";
+    MOTIF_CATEGORIES.forEach(cat=>{
+      const b=document.createElement("button");b.type="button";b.className="motif-chip"+(state[key]===cat.id?" active":"");
+      b.textContent=cat.label;b.onclick=()=>{
+        state[key]=cat.id;renderMotifFilters();
+        if(key==="designMotif"){if($("designInput").value.trim())runDesignSearch();else $("catalogStatus").textContent=cat.id==="all"?"":"Motif filter: "+cat.label;}
+        else runPriceSearch();
+      };el.appendChild(b);
+    });
+  };
+  make("designMotifFilters","designMotif");make("priceMotifFilters","priceMotif");
+}
 function toast(msg){const t=$("toast");t.textContent=msg;t.style.display="block";setTimeout(()=>t.style.display="none",2200)}
 function setView(name){
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
@@ -191,7 +225,8 @@ $("excelInput").onchange=async e=>{
     await saveCatalog(rows,file.name);
     $("loadStatus").textContent=`Loaded ${fmt(rows.length)} file records from ${file.name}.`;
     toast("Catalog loaded");
-    renderInfo();
+    renderMotifFilters();
+  renderInfo();
   }catch(err){$("loadStatus").textContent="Load error: "+err.message}
 };
 $("clearCatalog").onclick=async()=>{
