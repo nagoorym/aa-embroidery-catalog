@@ -485,7 +485,7 @@ function priceSearch(){
   out.slice(0,500).forEach(g=>{
     const d=document.createElement("div");d.className="priceitem";
     const info=document.createElement("span");
-    info.innerHTML=`<b>Design ${escapeHtml(g.design)}</b><br><span class="muted">${escapeHtml(g.collection)} · Folder: ${escapeHtml(g.folder)}</span><br><span class="muted">${fmt(g.c.stitches)} stitches · ${fmt(g.c.units)} units</span>`;
+    info.innerHTML=`<b>Design ${escapeHtml(g.design)}</b><br><span class="muted">${escapeHtml(g.collection)} · Folder: ${escapeHtml(g.folder)}</span><br><span class="muted">Total: ${fmt(g.c.actualStitches)} stitches · ${fmt(g.c.units)} units</span>`;
     const right=document.createElement("span");right.className="price-right";
     const cost=document.createElement("b");cost.textContent=money(g.c.cost);
     const previewBtn=document.createElement("button");previewBtn.type="button";previewBtn.className="secondary detail-btn preview-design-btn";previewBtn.textContent="◉ PREVIEW DESIGN";
