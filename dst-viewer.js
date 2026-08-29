@@ -10,9 +10,24 @@
     '<div class="modal-head"><h2 id="dstPreviewHeading">DST Preview</h2><button id="dstPreviewClose" class="iconbtn dark" type="button">×</button></div>'+
     '<div class="dst-preview-toolbar"><span id="dstPreviewTitle" class="dst-preview-title"></span><button id="dstFit" class="secondary" type="button">FIT</button><button id="dstZoomOut" class="secondary" type="button">ZOOM −</button><button id="dstZoomIn" class="secondary" type="button">ZOOM +</button></div>'+
     '<div class="dst-preview-main"><div id="dstStage" class="dst-preview-stage"><canvas id="dstCanvas"></canvas></div><aside class="dst-preview-side"><b>DST FILES</b><div id="dstFileList" class="dst-file-list"></div><div id="dstMeta" class="dst-meta"></div></aside></div>'+
-    '<div id="dstPreviewPath" class="dst-preview-footer"></div></div>';
+    '<div class="dst-preview-footer"><span id="dstPreviewPath"></span><button id="dstCopyPath" class="secondary dst-copy-path" type="button">📋 COPY PATH</button></div></div>';
   document.body.appendChild(modal);
   const $=id=>document.getElementById(id);
+  async function copyPath(text){
+    const value=String(text||"");
+    if(!value)return;
+    try{
+      if(navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(value);
+      else{
+        const ta=document.createElement("textarea");ta.value=value;ta.setAttribute("readonly","");
+        ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);
+        ta.select();document.execCommand("copy");document.body.removeChild(ta);
+      }
+      const btn=$("dstCopyPath"), original=btn.textContent;
+      btn.textContent="COPIED ✓";
+      setTimeout(()=>btn.textContent=original,1600);
+    }catch(e){$("dstCopyPath").textContent="COPY FAILED";}
+  }
   const canvas=$("dstCanvas"), ctx=canvas.getContext("2d");
   const stage=$("dstStage"), list=$("dstFileList"), meta=$("dstMeta");
   let current=null, model=null, zoom=1, panX=0, panY=0, drag=null;
@@ -50,7 +65,7 @@
   async function select(file,button){try{$("dstPreviewHeading").textContent=file.name+" — Loading";model=decode(await file.arrayBuffer());current=file;list.querySelectorAll("button").forEach(b=>b.classList.remove("active"));button.classList.add("active");$("dstPreviewHeading").textContent=file.name;meta.innerHTML='<div><b>STITCHES (DRAWN)</b>'+model.stitches.toLocaleString("en-IN")+'</div><div><b>COLOR CHANGES</b>'+model.changes+'</div><div><b>DIMENSIONS</b>'+model.width.toFixed(1)+' × '+model.height.toFixed(1)+' mm</div>';resize();fit()}catch(e){meta.innerHTML='<div><b>ERROR</b>'+String(e.message||e)+'</div>';}}
   function open(data){$("dstPreviewTitle").textContent=data.title||"Design Preview";$("dstPreviewPath").textContent=data.folderPath||"";list.innerHTML="";model=null;modal.classList.add("open");modal.setAttribute("aria-hidden","false");data.files.forEach((f,i)=>{const b=document.createElement("button");b.type="button";b.className="dst-file-btn";b.textContent=f.name;b.onclick=()=>select(f,b);list.appendChild(b);if(i===0)setTimeout(()=>select(f,b),0)});setTimeout(resize,0)}
   function close(){modal.classList.remove("open");modal.setAttribute("aria-hidden","true");}
-  $("dstPreviewClose").onclick=close;modal.addEventListener("click",e=>{if(e.target===modal)close()});$("dstFit").onclick=fit;$("dstZoomIn").onclick=()=>{zoom*=1.25;draw()};$("dstZoomOut").onclick=()=>{zoom/=1.25;draw()};
+  $("dstPreviewClose").onclick=close;modal.addEventListener("click",e=>{if(e.target===modal)close()});$("dstCopyPath").onclick=()=>copyPath($("dstPreviewPath").textContent);$("dstFit").onclick=fit;$("dstZoomIn").onclick=()=>{zoom*=1.25;draw()};$("dstZoomOut").onclick=()=>{zoom/=1.25;draw()};
   canvas.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,px:panX,py:panY};canvas.setPointerCapture(e.pointerId)});
   canvas.addEventListener("pointermove",e=>{if(!drag)return;panX=drag.px+(e.clientX-drag.x)*(devicePixelRatio||1);panY=drag.py+(e.clientY-drag.y)*(devicePixelRatio||1);draw()});
   canvas.addEventListener("pointerup",()=>drag=null);canvas.addEventListener("wheel",e=>{e.preventDefault();zoom*=e.deltaY<0?1.12:1/1.12;draw()},{passive:false});
