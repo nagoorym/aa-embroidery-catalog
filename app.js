@@ -488,9 +488,9 @@ function priceSearch(){
     info.innerHTML=`<b>Design ${escapeHtml(g.design)}</b><br><span class="muted">${escapeHtml(g.collection)} · Folder: ${escapeHtml(g.folder)}</span><br><span class="muted">${fmt(g.c.stitches)} stitches · ${fmt(g.c.units)} units</span>`;
     const right=document.createElement("span");right.className="price-right";
     const cost=document.createElement("b");cost.textContent=money(g.c.cost);
-    const copyBtn=document.createElement("button");copyBtn.type="button";copyBtn.className="secondary detail-btn copy-path-btn";copyBtn.textContent="COPY PATH";
-    copyBtn.onclick=()=>copyFolderPath(g,copyBtn);
-    right.appendChild(cost);right.appendChild(copyBtn);
+    const previewBtn=document.createElement("button");previewBtn.type="button";previewBtn.className="secondary detail-btn preview-design-btn";previewBtn.textContent="◉ PREVIEW DESIGN";
+    previewBtn.onclick=()=>openDesignPreview(g);
+    right.appendChild(cost);right.appendChild(previewBtn);
     d.appendChild(info);d.appendChild(right);
     box.appendChild(d);
   });
