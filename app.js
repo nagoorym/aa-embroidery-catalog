@@ -33,19 +33,48 @@ function rowMatchesMotif(r,id){
   const text=rowMotifText(r);
   return cat.words.some(w=>text.includes(w));
 }
+function priceBaseGroups(){
+  const min=$("minPrice")&&$("minPrice").value===""?0:Number($("minPrice")?.value||0);
+  const max=$("maxPrice")&&$("maxPrice").value===""?Infinity:Number($("maxPrice")?.value||Infinity);
+  const comp=$("priceComponent")?.value||"";
+  return groupDesigns(state.rows).filter(g=>{
+    let rows=g.rows.filter(r=>r.stitches>0);
+    if(comp)rows=rows.filter(r=>r.component===comp);
+    const c=designCost(g,rows);
+    return c.cost>=min&&c.cost<=max;
+  });
+}
+function availablePriceMotifs(){
+  const groups=priceBaseGroups();
+  const ids=new Set(["all"]);
+  for(const cat of MOTIF_CATEGORIES){
+    if(cat.id!=="all"&&groups.some(g=>g.rows.some(r=>rowMatchesMotif(r,cat.id))))ids.add(cat.id);
+  }
+  return ids;
+}
 function renderMotifFilters(){
+  const priceAvailable=availablePriceMotifs();
+  if(state.priceMotif!=="all"&&!priceAvailable.has(state.priceMotif))state.priceMotif="all";
   const make=(target,key)=>{
     const el=$(target);if(!el)return;el.innerHTML="";
     MOTIF_CATEGORIES.forEach(cat=>{
-      const b=document.createElement("button");b.type="button";b.className="motif-chip"+(state[key]===cat.id?" active":"");
-      b.textContent=cat.label;b.onclick=()=>{
-        state[key]=cat.id;renderMotifFilters();
-        if(key==="designMotif"){if($("designInput").value.trim())searchDesign();else $("catalogStatus").textContent=cat.id==="all"?"Select a motif or enter a design number.":"Motif filter: "+cat.label;}
+      const unavailable=key==="priceMotif"&&!priceAvailable.has(cat.id);
+      const b=document.createElement("button");
+      b.type="button";
+      b.className="motif-chip"+(state[key]===cat.id?" active":"")+(unavailable?" unavailable":"");
+      b.textContent=cat.label;
+      b.disabled=unavailable;
+      b.onclick=()=>{
+        if(unavailable)return;
+        state[key]=cat.id;
+        if(key==="designMotif")searchDesign();
         else priceSearch();
-      };el.appendChild(b);
+      };
+      el.appendChild(b);
     });
   };
-  make("designMotifFilters","designMotif");make("priceMotifFilters","priceMotif");
+  make("designMotifFilters","designMotif");
+  make("priceMotifFilters","priceMotif");
 }
 function toast(msg){const t=$("toast");t.textContent=msg;t.style.display="block";setTimeout(()=>t.style.display="none",2200)}
 function setView(name){
@@ -491,14 +520,18 @@ function closeFolderDetails(){
 function searchDesign(){
   const q=$("designInput").value.trim().toLowerCase();
   const out=$("designResults");out.innerHTML="";
-  if(!q){$("catalogStatus").textContent="Enter a design number.";return}
   if(!state.rows.length){$("catalogStatus").textContent="No catalog loaded. Use Update Catalog first.";return}
+  if(!q&&state.designMotif==="all"){
+    $("catalogStatus").textContent="Enter a design number or choose a motif.";
+    return;
+  }
   const groups=groupDesigns(state.rows).filter(g=>{
-    const numberMatch=g.design.toLowerCase()===q;
+    const numberMatch=!q||g.design.toLowerCase()===q;
     const motifMatch=g.rows.some(r=>rowMatchesMotif(r,state.designMotif));
     return numberMatch&&motifMatch;
   });
-  $("catalogStatus").textContent=`${fmt(groups.length)} matching collection/folder record${groups.length===1?"":"s"} found.`;
+  const label=q?("Design "+q):(MOTIF_CATEGORIES.find(x=>x.id===state.designMotif)?.label||"Motif");
+  $("catalogStatus").textContent=fmt(groups.length)+" matching record"+(groups.length===1?"":"s")+" for "+label+".";
   groups.forEach(g=>out.appendChild(renderGroup(g)));
 }
 $("designSearchBtn").onclick=searchDesign;
@@ -508,7 +541,7 @@ function priceSearch(){
   const min=$("minPrice").value===""?0:Number($("minPrice").value);
   const max=$("maxPrice").value===""?Infinity:Number($("maxPrice").value);
   const comp=$("priceComponent").value;
-  const groups=groupDesigns(state.rows);
+  const groups=priceBaseGroups();
   const out=[];
   for(const g of groups){
     const motifMatch=g.rows.some(r=>rowMatchesMotif(r,state.priceMotif));
@@ -523,6 +556,7 @@ function priceSearch(){
   const box=$("priceResults");box.innerHTML="";
   if(!state.rows.length){box.innerHTML='<div class="card">Load a catalog first.</div>';return}
   const summary=document.createElement("div");summary.className="status";summary.textContent=`${fmt(out.length)} matching collection/folder records`;box.appendChild(summary);
+  renderMotifFilters();
   out.slice(0,500).forEach(g=>{
     const d=document.createElement("div");d.className="priceitem";
     const info=document.createElement("span");
