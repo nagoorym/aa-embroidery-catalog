@@ -9,7 +9,7 @@
   modal.innerHTML='<div class="modal-panel dst-preview-panel" role="dialog" aria-modal="true" aria-label="DST Preview">'+
     '<div class="modal-head"><h2 id="dstPreviewHeading">DST Preview</h2><button id="dstPreviewClose" class="iconbtn dark" type="button">×</button></div>'+
     '<div class="dst-preview-toolbar"><span id="dstPreviewTitle" class="dst-preview-title"></span><button id="dstFit" class="secondary" type="button">FIT</button><button id="dstZoomOut" class="secondary" type="button">ZOOM −</button><button id="dstZoomIn" class="secondary" type="button">ZOOM +</button></div>'+
-    '<div class="dst-preview-main"><div id="dstStage" class="dst-preview-stage"><canvas id="dstCanvas"></canvas></div><aside class="dst-preview-side"><b>DST FILES</b><div id="dstFileList" class="dst-file-list"></div><div id="dstMeta" class="dst-meta"></div></aside></div>'+
+    '<div class="dst-preview-main"><div id="dstStage" class="dst-preview-stage"><canvas id="dstCanvas"></canvas></div><aside class="dst-preview-side"><b>DST FILES</b><div id="dstFileList" class="dst-file-list"></div><div id="dstMeta" class="dst-meta"></div></aside></div><div id="dstCalculation" class="dst-calculation"></div>'+
     '<div class="dst-preview-footer"><span id="dstPreviewPath"></span><button id="dstCopyPath" class="secondary dst-copy-path" type="button">📋 COPY PATH</button></div></div>';
   document.body.appendChild(modal);
   const $=id=>document.getElementById(id);
@@ -31,6 +31,21 @@
   const canvas=$("dstCanvas"), ctx=canvas.getContext("2d");
   const stage=$("dstStage"), list=$("dstFileList"), meta=$("dstMeta");
   let current=null, model=null, zoom=1, panX=0, panY=0, drag=null;
+  const sleeveMultiplier=Number(localStorage.getItem("aa_sleeve_multiplier")||2);
+  const buttaMultiplier=Number(localStorage.getItem("aa_butta_multiplier")||20);
+  const componentFor=name=>{
+    const n=String(name||"").replace(/\\.[^.]+$/," ").toLowerCase();
+    if(/(^|[^a-z])(sleeve|sleeves|hand|hands|slv)([^a-z]|$)/.test(n))return "Sleeve / Hand";
+    if(/(^|[^a-z])(butta|buti|booti|butti|boota)([^a-z]|$)/.test(n))return "Butta";
+    if(/(^|[^a-z])back([^a-z]|$)/.test(n))return "Back";
+    if(/(^|[^a-z])front([^a-z]|$)/.test(n))return "Front";
+    if(/(^|[^a-z])full([^a-z]|$)/.test(n))return "Full Design";
+    return "Other";
+  };
+  const multiplierFor=name=>{
+    const c=componentFor(name);
+    return c==="Sleeve / Hand"?sleeveMultiplier:c==="Butta"?buttaMultiplier:1;
+  };
 
   function decode(buffer){
     const b=new Uint8Array(buffer), pts=[];
@@ -62,8 +77,28 @@
   function draw(){if(!model||!canvas.width)return;ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle="#111";ctx.fillRect(0,0,canvas.width,canvas.height);ctx.lineWidth=Math.max(1,1.25*(devicePixelRatio||1));ctx.lineJoin="round";let prev=null;
     for(const q of model.pts){if(!prev||q.jump||q.stop){prev=q;continue;}ctx.beginPath();ctx.strokeStyle=colors[q.color%colors.length];ctx.moveTo(prev.x*zoom+panX,-prev.y*zoom+panY);ctx.lineTo(q.x*zoom+panX,-q.y*zoom+panY);ctx.stroke();prev=q;}
   }
+  function renderCalculation(files,models){
+    const rows=files.map((f,i)=>{
+      const m=models[i], component=componentFor(f.name), multiplier=multiplierFor(f.name);
+      return {name:f.name,component,stitches:m.stitches,multiplier,billable:m.stitches*multiplier};
+    });
+    const total=rows.reduce((s,r)=>s+r.billable,0);
+    const units=Math.floor(total/1000);
+    $("dstCalculation").innerHTML=
+      '<h3>STITCH COUNT &amp; CALCULATION</h3>'+
+      '<div class="dst-calc-table"><div class="dst-calc-row dst-calc-head"><span>Component</span><span>DST File</span><span>Stitches</span><span>Multiplier</span><span>Billable</span></div>'+
+      rows.map(r=>'<div class="dst-calc-row"><span>'+r.component+'</span><span>'+r.name+'</span><span>'+r.stitches.toLocaleString("en-IN")+'</span><span>×'+r.multiplier+'</span><span>'+r.billable.toLocaleString("en-IN")+'</span></div>').join('')+
+      '</div><div class="dst-total"><b>Total Billable Stitches</b><strong>'+total.toLocaleString("en-IN")+'</strong></div>'+
+      '<div class="dst-logic"><b>Calculation Logic</b><div>Billable = Front/Back/Full ×1 + Sleeve/Hand ×'+sleeveMultiplier+' + Butta ×'+buttaMultiplier+'</div><div>Total = '+rows.map(r=>r.stitches.toLocaleString("en-IN")+' × '+r.multiplier).join(' + ')+' = <strong>'+total.toLocaleString("en-IN")+' stitches</strong></div></div>'+
+      '<div class="dst-aa-price"><b>AA Price Calculation</b><div>Billable Units = FLOOR('+total.toLocaleString("en-IN")+' ÷ 1,000) = <strong>'+units+'</strong></div><div>AA Price = '+units+' × [AA Rate]</div></div>';
+  }
   async function select(file,button){try{$("dstPreviewHeading").textContent=file.name+" — Loading";model=decode(await file.arrayBuffer());current=file;list.querySelectorAll("button").forEach(b=>b.classList.remove("active"));button.classList.add("active");$("dstPreviewHeading").textContent=file.name;meta.innerHTML='<div><b>STITCHES (DRAWN)</b>'+model.stitches.toLocaleString("en-IN")+'</div><div><b>COLOR CHANGES</b>'+model.changes+'</div><div><b>DIMENSIONS</b>'+model.width.toFixed(1)+' × '+model.height.toFixed(1)+' mm</div>';resize();fit()}catch(e){meta.innerHTML='<div><b>ERROR</b>'+String(e.message||e)+'</div>';}}
-  function open(data){$("dstPreviewTitle").textContent=data.title||"Design Preview";$("dstPreviewPath").textContent=data.folderPath||"";list.innerHTML="";model=null;modal.classList.add("open");modal.setAttribute("aria-hidden","false");data.files.forEach((f,i)=>{const b=document.createElement("button");b.type="button";b.className="dst-file-btn";b.textContent=f.name;b.onclick=()=>select(f,b);list.appendChild(b);if(i===0)setTimeout(()=>select(f,b),0)});setTimeout(resize,0)}
+  async function open(data){$("dstPreviewTitle").textContent=data.title||"Design Preview";$("dstPreviewPath").textContent=data.folderPath||"";list.innerHTML="";model=null;modal.classList.add("open");modal.setAttribute("aria-hidden","false");
+    const models=[];
+    for(const f of data.files){try{models.push(decode(await f.arrayBuffer()));}catch(e){models.push({stitches:0})}}
+    data.files.forEach((f,i)=>{const b=document.createElement("button");b.type="button";b.className="dst-file-btn";b.textContent=f.name;b.onclick=()=>select(f,b);list.appendChild(b);if(i===0)setTimeout(()=>select(f,b),0)});
+    renderCalculation(data.files,models);setTimeout(resize,0)
+  }
   function close(){modal.classList.remove("open");modal.setAttribute("aria-hidden","true");}
   $("dstPreviewClose").onclick=close;modal.addEventListener("click",e=>{if(e.target===modal)close()});$("dstCopyPath").onclick=()=>copyPath($("dstPreviewPath").textContent);$("dstFit").onclick=fit;$("dstZoomIn").onclick=()=>{zoom*=1.25;draw()};$("dstZoomOut").onclick=()=>{zoom/=1.25;draw()};
   canvas.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,px:panX,py:panY};canvas.setPointerCapture(e.pointerId)});
