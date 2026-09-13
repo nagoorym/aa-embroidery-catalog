@@ -291,23 +291,24 @@ function groupDesigns(rows){
   return [...map.values()];
 }
 function designCost(group,selected){
-  // Qty = number of sets requested. Sleeve/Hand has a base ×2 charge
-  // because one set normally means left + right. Every value below is
-  // derived from the same formula so row amounts and the summary cannot drift.
-  let actualStitches=0,billableStitches=0,units=0,cost=0;
+  // Calculate the complete physical embroidery job first.
+  // A single Sleeve/Hand DST represents one sleeve, so its billable
+  // stitches are multiplied by 2 for left + right by default.
+  // IMPORTANT: combine all component billable stitches FIRST, then
+  // convert the combined total into billable 1,000-stitch units.
+  // This prevents each component from being rounded down separately.
+  let actualStitches=0,billableStitches=0;
   for(const item of selected){
     const r=item.row||item;
     const qty=Math.max(1,Math.trunc(Number(item.qty)||1));
     const multiplier=r.component==="Sleeve/Hand"?state.sleeveMultiplier:1;
     const actual=r.stitches*qty;
     const billable=actual*multiplier;
-    const rowUnits=Math.floor(billable/1000);
-    const rowCost=rowUnits*state.rate;
     actualStitches+=actual;
     billableStitches+=billable;
-    units+=rowUnits;
-    cost+=rowCost;
   }
+  const units=Math.floor(billableStitches/1000);
+  const cost=units*state.rate;
   return {actualStitches,billableStitches,units,cost};
 }
 
@@ -328,7 +329,7 @@ function renderGroup(group){
 
   const comps=document.createElement("div");comps.className="components component-table";
   const tableHead=document.createElement("div");tableHead.className="comp table-head";
-  tableHead.innerHTML=`<span>Include</span><span>Component</span><span>File & Stitches</span><span>Qty (units)</span><span>Multiplier</span><span>Amount</span>`;
+  tableHead.innerHTML=`<span>Include</span><span>Component</span><span>File & Stitches</span><span>Qty (units)</span><span>Multiplier</span><span>Billable</span>`;
   comps.appendChild(tableHead);
 
   const rows=[];
@@ -366,9 +367,8 @@ function renderGroup(group){
       const baseMultiplier=sleeve?state.sleeveMultiplier:1;
       const effectiveMultiplier=item.qty*baseMultiplier;
       const billable=item.row.stitches*effectiveMultiplier;
-      const rowUnits=Math.floor(billable/1000);
       item.el.querySelector('.multiplier-cell').textContent='×'+effectiveMultiplier;
-      item.el.querySelector('.amount-cell').textContent=money(rowUnits*state.rate);
+      item.el.querySelector('.amount-cell').textContent=fmt(billable)+' billable';
       item.el.classList.toggle('not-included',!check.checked);
       if(check.checked)selected.push(item);
     });
