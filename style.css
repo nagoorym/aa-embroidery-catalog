@@ -116,3 +116,17 @@ h2{margin:0 0 8px;font-size:20px}.page-heading p,.hero p{margin:0;color:#777;lin
 .result-details{border-top:1px solid rgba(0,0,0,.08)}
 .collapse-toggle{white-space:nowrap}
 @media(max-width:800px){.result-summary{align-items:flex-start;flex-direction:column}.summary-metrics{width:100%;justify-content:space-between}.result-sort{justify-content:flex-start}}
+
+/* DST calculation breakdown */
+.dst-calculation{border-top:1px solid #ddd;padding:18px 20px;background:#fff}
+.dst-calculation h3{margin:0 0 14px;font-size:18px;letter-spacing:.03em}
+.dst-calc-table{border:1px solid #e4e4e4;border-radius:10px;overflow:hidden}
+.dst-calc-row{display:grid;grid-template-columns:1.1fr 1.5fr 1fr .9fr 1.2fr;gap:10px;padding:10px 12px;border-bottom:1px solid #eee;align-items:center;font-size:13px}
+.dst-calc-row:last-child{border-bottom:0}
+.dst-calc-head{background:#f6f6f4;font-weight:800;color:#555}
+.dst-total{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:14px 16px;background:#f0f6fc;border-radius:10px;font-size:16px}
+.dst-total strong{font-size:22px}
+.dst-logic{margin-top:12px;padding:14px 16px;background:#f1f8f1;border-radius:10px;line-height:1.65}
+.dst-logic>b,.dst-aa-price>b{display:block;margin-bottom:5px}
+.dst-aa-price{margin-top:12px;padding:14px 16px;background:#faf5e9;border-radius:10px;line-height:1.7}
+@media(max-width:760px){.dst-calculation{padding:14px 12px}.dst-calc-table{overflow-x:auto}.dst-calc-row{min-width:620px}.dst-total{font-size:14px}.dst-total strong{font-size:19px}}
