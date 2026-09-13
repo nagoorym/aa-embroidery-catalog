@@ -4,6 +4,7 @@ const state={
   stop:false,
   rate:Number(localStorage.getItem("aa_rate")||10),
   sleeveMultiplier:Number(localStorage.getItem("aa_sleeve_multiplier")||2),
+  buttaMultiplier:Number(localStorage.getItem("aa_butta_multiplier")||20),
   catalogName:localStorage.getItem("aa_catalog_name")||"",
   loadedAt:localStorage.getItem("aa_catalog_loaded_at")||"",
   rootPath:localStorage.getItem("aa_root_path")||"C:\\Embroidery",
@@ -145,7 +146,7 @@ function componentFrom(name){
   if(has("front")) return "Front";
   if(has("hand","hands","sleeve","sleeves","slv","slvhand","sleev")) return "Sleeve/Hand";
   if(has("neck")) return "Neck";
-  if(has("booti","buti")) return "Buti";
+  if(has("butta","buti","booti","butti","boota")) return "Butta";
   if(has("patch")) return "Patch";
   if(has("logo")) return "Logo";
 
@@ -301,7 +302,7 @@ function designCost(group,selected){
   for(const item of selected){
     const r=item.row||item;
     const qty=Math.max(1,Math.trunc(Number(item.qty)||1));
-    const multiplier=r.component==="Sleeve/Hand"?state.sleeveMultiplier:1;
+    const multiplier=r.component==="Sleeve/Hand"?state.sleeveMultiplier:r.component==="Butta"?state.buttaMultiplier:1;
     const actual=r.stitches*qty;
     const billable=actual*multiplier;
     actualStitches+=actual;
@@ -364,7 +365,7 @@ function renderGroup(group){
       item.qty=Math.max(1,Number(input.value)||1);
       input.value=item.qty;
       const sleeve=item.row.component==="Sleeve/Hand";
-      const baseMultiplier=sleeve?state.sleeveMultiplier:1;
+      const baseMultiplier=sleeve?state.sleeveMultiplier:item.row.component==="Butta"?state.buttaMultiplier:1;
       const effectiveMultiplier=item.qty*baseMultiplier;
       const billable=item.row.stitches*effectiveMultiplier;
       item.el.querySelector('.multiplier-cell').textContent='×'+effectiveMultiplier;
@@ -507,7 +508,8 @@ function showFolderDetails(group){
   group.rows.forEach(r=>{
     const tr=document.createElement("tr");
     const sleeve=r.component==="Sleeve/Hand";
-    const qty=sleeve?state.sleeveMultiplier:1;
+    const butta=r.component==="Butta";
+    const qty=sleeve?state.sleeveMultiplier:butta?state.buttaMultiplier:1;
     const chargedStitches=r.stitches*qty;
     const units=Math.floor(chargedStitches/1000);
     const cost=units*state.rate;
@@ -612,14 +614,16 @@ function renderInfo(){
   <b>Last loaded:</b> ${escapeHtml(state.loadedAt||"—")}<br>
   <b>Rate:</b> ${money(state.rate)} per 1,000 billable stitches<br>
   <b>Sleeve multiplier:</b> ×${state.sleeveMultiplier}<br>
+  <b>Butta multiplier:</b> ×${state.buttaMultiplier}<br>
   <b>Embroidery root:</b> ${escapeHtml(state.rootPath)}<br>
   <b>Folder permission:</b> ${state.rootHandle?"Connected":"Not connected"}`;
 }
-$("rateInput").value=state.rate;$("sleeveMultiplier").value=state.sleeveMultiplier;
+$("rateInput").value=state.rate;$("sleeveMultiplier").value=state.sleeveMultiplier;$("buttaMultiplier").value=state.buttaMultiplier;
 $("saveSettings").onclick=()=>{
   state.rate=Math.max(0,Number($("rateInput").value)||0);
   state.sleeveMultiplier=Math.max(1,Number($("sleeveMultiplier").value)||2);
-  localStorage.setItem("aa_rate",state.rate);localStorage.setItem("aa_sleeve_multiplier",state.sleeveMultiplier);
+  state.buttaMultiplier=Math.max(1,Number($("buttaMultiplier").value)||20);
+  localStorage.setItem("aa_rate",state.rate);localStorage.setItem("aa_sleeve_multiplier",state.sleeveMultiplier);localStorage.setItem("aa_butta_multiplier",state.buttaMultiplier);
   toast("Settings saved");
 };
 
@@ -768,6 +772,7 @@ $("exportXlsx").onclick=()=>{
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet([
     {Setting:"Default rate per 1,000 billable stitches",Value:state.rate},
     {Setting:"Sleeve multiplier",Value:state.sleeveMultiplier},
+    {Setting:"Butta multiplier",Value:state.buttaMultiplier},
     {Setting:"Design number rule",Value:"Immediate design folder name only"},
     {Setting:"Source",Value:"C:\\Embroidery"}
   ]),"SETTINGS");
