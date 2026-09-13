@@ -84,12 +84,17 @@
     });
     const total=rows.reduce((s,r)=>s+r.billable,0);
     const units=Math.floor(total/1000);
+    const byComponent=(name)=>rows.filter(r=>r.component===name).reduce((s,r)=>s+r.stitches,0);
+    const front=byComponent("Front"), sleeve=byComponent("Sleeve / Hand"), butta=byComponent("Butta"), back=byComponent("Back"), full=byComponent("Full Design");
+    const frontBill=front, sleeveBill=sleeve*sleeveMultiplier, buttaBill=butta*buttaMultiplier, backBill=back, fullBill=full;
+    const formula='Front ('+front.toLocaleString("en-IN")+' × 1) + (Sleeve ('+sleeve.toLocaleString("en-IN")+') × '+sleeveMultiplier+') + (Butta ('+butta.toLocaleString("en-IN")+') × '+buttaMultiplier+') + Back ('+back.toLocaleString("en-IN")+' × 1) + Full ('+full.toLocaleString("en-IN")+' × 1)';
+    const billFormula=frontBill.toLocaleString("en-IN")+' + '+sleeveBill.toLocaleString("en-IN")+' + '+buttaBill.toLocaleString("en-IN")+' + '+backBill.toLocaleString("en-IN")+' + '+fullBill.toLocaleString("en-IN");
     $("dstCalculation").innerHTML=
       '<h3>STITCH COUNT &amp; CALCULATION</h3>'+
       '<div class="dst-calc-table"><div class="dst-calc-row dst-calc-head"><span>Component</span><span>DST File</span><span>Stitches</span><span>Multiplier</span><span>Billable</span></div>'+
       rows.map(r=>'<div class="dst-calc-row"><span>'+r.component+'</span><span>'+r.name+'</span><span>'+r.stitches.toLocaleString("en-IN")+'</span><span>×'+r.multiplier+'</span><span>'+r.billable.toLocaleString("en-IN")+'</span></div>').join('')+
       '</div><div class="dst-total"><b>Total Billable Stitches</b><strong>'+total.toLocaleString("en-IN")+'</strong></div>'+
-      '<div class="dst-logic"><b>Calculation Logic</b><div>Billable = Front/Back/Full ×1 + Sleeve/Hand ×'+sleeveMultiplier+' + Butta ×'+buttaMultiplier+'</div><div>Total = '+rows.map(r=>r.stitches.toLocaleString("en-IN")+' × '+r.multiplier).join(' + ')+' = <strong>'+total.toLocaleString("en-IN")+' stitches</strong></div></div>'+
+      '<div class="dst-logic"><b>Calculation Logic — With Stitch Counts</b><div><strong>'+formula+'</strong></div><div>'+billFormula+' = <strong>'+total.toLocaleString("en-IN")+' stitches</strong></div></div>'+
       '<div class="dst-aa-price"><b>AA Price Calculation</b><div>Billable Units = FLOOR('+total.toLocaleString("en-IN")+' ÷ 1,000) = <strong>'+units+'</strong></div><div>AA Price = '+units+' × [AA Rate]</div></div>';
   }
   async function select(file,button){try{$("dstPreviewHeading").textContent=file.name+" — Loading";model=decode(await file.arrayBuffer());current=file;list.querySelectorAll("button").forEach(b=>b.classList.remove("active"));button.classList.add("active");$("dstPreviewHeading").textContent=file.name;meta.innerHTML='<div><b>STITCHES (DRAWN)</b>'+model.stitches.toLocaleString("en-IN")+'</div><div><b>COLOR CHANGES</b>'+model.changes+'</div><div><b>DIMENSIONS</b>'+model.width.toFixed(1)+' × '+model.height.toFixed(1)+' mm</div>';resize();fit()}catch(e){meta.innerHTML='<div><b>ERROR</b>'+String(e.message||e)+'</div>';}}
